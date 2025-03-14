@@ -1,0 +1,84 @@
+name: Publish Docker image
+
+on:
+  workflow_run:
+    workflows: [Check Submodule Tags]
+    types:
+      - completed
+  # workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  check_update:
+    name: Has the submodule been updated
+    runs-on: ubuntu-latest
+    outputs:
+      latest_tag: ${{ steps.extract.outputs.latest_tag }}
+      repo_updated: ${{ steps.extract.outputs.repo_updated }}
+    steps:
+      - name: Download submodule info data
+        uses: actions/download-artifact@v4
+        with:
+          name: repo-data
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract information
+        id: extract
+        run: |
+          echo "latest_tag=$(cat latest_tag)" >> $GITHUB_OUTPUT
+          echo "repo_updated=$(cat repo_updated)" >> $GITHUB_OUTPUT
+
+  push_to_registries:
+    name: Push Docker image to multiple registries
+    needs: [check_update]
+    if: ${{ needs.check_update.outputs.repo_updated == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create env variable for image path/url
+        run: echo IMAGE_PATH=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} >> $GITHUB_ENV
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PATH }}
+
+      - name: Build and push Docker images
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.IMAGE_PATH }}:latest
+            ${{ env.IMAGE_PATH }}:${{ needs.check_update.outputs.latest_tag }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
