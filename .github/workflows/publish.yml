@@ -63,6 +63,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_PATH }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.check_update.outputs.latest_tag }}
 
       - name: Build and push Docker images
         id: push
@@ -71,9 +73,10 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: |
-            ${{ env.IMAGE_PATH }}:latest
-            ${{ env.IMAGE_PATH }}:${{ needs.check_update.outputs.latest_tag }}
+          # tags: |
+          #   ${{ env.IMAGE_PATH }}:latest
+          #   ${{ env.IMAGE_PATH }}:${{ needs.check_update.outputs.latest_tag }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Generate artifact attestation
