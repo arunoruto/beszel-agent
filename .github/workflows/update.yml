@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 env:
-  TARGET_REPO: https://github.com/henrygd/beszel.git
+  TARGET_REPO_NAME: henrygd/beszel
   VERSION_FILE: VERSION.txt
 
 jobs:
@@ -17,13 +17,20 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
-        # with:
-        #   submodules: "recursive"
+
+      - name: Checkout Target Repo to Get Tags
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.TARGET_REPO_NAME }}
+          path: .temp
+          fetch-depth: 0
 
       - name: Get Latest Tag
         id: get-tag
         run: |
-          LATEST_TAG=$(git ls-remote --tags --sort=-v:refname ${{ env.TARGET_REPO }} | grep -vF '{}' | grep -v -- '-pre$' | head -n1 | awk -F/ '{print $3}')
+          cd .temp
+          LATEST_TAG=$(git tag --sort=-creatordate | head -n 1)
+          echo "Latest chronological tag found: $LATEST_TAG"
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
 
       - name: Check tag
@@ -41,12 +48,12 @@ jobs:
             git commit -m "chore: update submodule to ${{ steps.get-tag.outputs.latest_tag }}"
             git push
 
-            echo "${{ env.TARGET_REPO }} updated:"
+            echo "${{ env.TARGET_REPO_NAME }} updated:"
             echo "  From: $CURRENT_TAG"
             echo "  To:   $LATEST_TAG"
             echo "repo_updated=true" >> $GITHUB_OUTPUT
           else
-            echo "${{ env.TARGET_REPO }} already up-to-date $CURRENT_TAG"
+            echo "${{ env.TARGET_REPO_NAME }} already up-to-date $CURRENT_TAG"
             echo "repo_updated=false" >> $GITHUB_OUTPUT
           fi
 
