@@ -1,3 +1,10 @@
+> [!NOTE]  
+> Beszel provides an official [beszel-agent-nvidia](https://hub.docker.com/r/henrygd/beszel-agent-nvidia) image now. Feel free to try it out!
+> I am going to keep maintaining this repo for now, since there are some legacy systems I need to monitor,
+> where the CUDA(-runtime) version isn't compatible with the image. If you get a similar error to
+> `nvidia-container-cli: requirement error: unsatisfied condition: cuda>=12.9, please update your driver to a newer version, or use an earlier cuda container: unknown`,
+> you can use this version instead 🙂
+
 # beszel-agent container with GPU support (Nvidia)
 
 This repository provides a Dockerfile with cuda support to track GPU usage.
