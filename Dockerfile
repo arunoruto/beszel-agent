@@ -10,7 +10,7 @@ COPY --from=beszel /agent /agent
 
 # Install NVIDIA Toolkit
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends nvidia-container-toolkit && \
+    apt-get install -y --no-install-recommends nvidia-container-toolkit smartmontools && \
     rm -rf /var/lib/apt/lists/*
 
 # Set the entrypoint
